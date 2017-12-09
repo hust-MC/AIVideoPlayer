@@ -229,7 +229,6 @@ public class PictureUtils {
 
     }
 
-
     class Vertext {
         int x = 0;
         int y = 0;

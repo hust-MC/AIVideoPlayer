@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.SurfaceTexture;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -21,10 +20,7 @@ import android.widget.Toast;
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
-import org.opencv.android.Utils;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.imgproc.Imgproc;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -46,10 +42,10 @@ public class MainActivity extends Activity {
      */
     BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
-        public void onManagerConnected(int status){
+        public void onManagerConnected(int status) {
             switch (status) {
                 case LoaderCallbackInterface.SUCCESS:
-                    Log.i("MCLOG","OpenCV loaded successfully");
+                    Log.i("MCLOG", "OpenCV loaded successfully");
                     break;
                 default:
                     break;
@@ -110,36 +106,17 @@ public class MainActivity extends Activity {
                     long time1 = System.currentTimeMillis();
                     Log.d("MCLOG", "1 : " + time1);
                     Bitmap bmp = mVideoView.getBitmap();
-
                     Log.d("MCLOG", "2 : " + (System.currentTimeMillis() - time1));
 
-                    int width = bmp.getWidth();
-                    int height = bmp.getHeight();
-                    int[] rgb = new int[width * height];
-                    int[] grey = new int[rgb.length];
-                    int[] sobelPic = new int[rgb.length];
+                    AlgorithmBuilder builder = new AlgorithmBuilder(bmp);
+                    Bitmap resultBmp = builder.Gray().Canny().transformToBitmap();
 
-//                    bmp.getPixels(rgb, 0, width, 0, 0, bmp.getWidth(), bmp.getHeight());
-
-//                    PictureUtils.convertToGrey(rgb, grey);
-//                    PictureUtils.sobel(grey, width, height, sobelPic);
-
-                    mMatSrc = new Mat(bmp.getWidth(), bmp.getHeight(), CvType.CV_8UC4);
-                    Utils.bitmapToMat(bmp, mMatSrc);
-                    Mat mMatGrey = new Mat(bmp.getWidth(), bmp.getHeight(), CvType.CV_8SC1);
-                    Imgproc.cvtColor(mMatSrc, mMatGrey, 1);
-                    Mat mMatCanny = new Mat(bmp.getWidth(), bmp.getHeight(), CvType.CV_8SC1);
-                    Imgproc.Canny(mMatGrey, mMatCanny, 80, 100);
-                    Bitmap result = Bitmap.createBitmap(bmp.getWidth(),bmp.getHeight(), Bitmap.Config.RGB_565 );
-                    Utils.matToBitmap(mMatCanny, result);
-//                    mPreview.setImageBitmap(Bitmap.createBitmap(sobelPic, width, height, Bitmap.Config
-//                            .RGB_565));
-                    result.compress(Bitmap.CompressFormat.JPEG, 80, baos);
-
-                    mPreview.setImageBitmap(result);
+                    mPreview.setImageBitmap(resultBmp);
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 80, baos);
 
                     ImgSearch.sampleOfNormalInterface(baos.toByteArray(), new ImageSearchResult());
                     mNeedSearch = false;
+
                 }
             }
         });
@@ -156,7 +133,7 @@ public class MainActivity extends Activity {
         super.onResume();
 
         if (!OpenCVLoader.initDebug()) {
-            Log.d("MCLOG","OpenCV library not found!");
+            Log.d("MCLOG", "OpenCV library not found!");
         } else {
             Log.d("MCLOG", "OpenCV library found inside package. Using it!");
             mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
