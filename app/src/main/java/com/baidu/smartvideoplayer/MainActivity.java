@@ -121,12 +121,16 @@ public class MainActivity extends Activity implements View.OnTouchListener{
                     Log.d("MCLOG", "1 : " + time1);
                     Bitmap bmp = mVideoView.getBitmap();
                     Log.d("MCLOG", "2 : " + (System.currentTimeMillis() - time1));
-
 /*                    AlgorithmBuilder builder = new AlgorithmBuilder(bmp);
+=======
+                    /*
+                    AlgorithmBuilder builder = new AlgorithmBuilder(bmp);
+>>>>>>> 对图像进行分块处理，得到感兴趣区域
                     Bitmap resultBmp = builder.Gray().Canny().transformToBitmap();
 
                     mPreview.setImageBitmap(resultBmp);
                     bmp.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+<<<<<<< HEAD
 */
                     int width = bmp.getWidth();
                     int height = bmp.getHeight();
