@@ -1,12 +1,14 @@
 package com.baidu.smartvideoplayer;
 
 import android.graphics.Bitmap;
+import android.util.Log;
 import android.widget.ImageView;
 
 import org.opencv.android.Utils;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
+import org.opencv.core.Rect;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
@@ -144,12 +146,246 @@ public class PictureUtils {
         }
     }
 
-//    static void turnTo2(int[] pic) {
-//        for (int i = 0; i < pic.length; i++) {
-//            pic[i] = (pic[i] & 0xff) > MainActivity.thresholdValue ? WHITE
-//                    : BLACK;
-//        }
-//    }
+    /**
+     * 二值化
+     * @param sobelImage
+     * @param height
+     * @param width
+     * @param T
+     */
+    public static void turn2(int[] sobelImage, int height, int width, int T) {
+        for (int i = 1; i < height - 1; i++) {
+            for (int j = 1; j < width - 1; j++) {
+                int gray = sobelImage[i * width + j] & 0xff;
+                int result = gray >= T ? 255 : 0;
+                sobelImage[i * width + j] = (ALPHA | result << 16 | result << 8 | result);
+            }
+        }
+
+    }
+
+    /**
+     * 划块(20*20)
+     * @param sobelImage
+     * @param height
+     * @param width
+     */
+    public static void blockSplit(int[] sobelImage, int height, int width, float centerX, float centerY) {
+
+        final int NUMX = 20;
+        final int NUMY = 20;
+        int DELTAX = width / NUMX;
+        int DELTAY = height / NUMY;
+        int scale[][] = new int[NUMY][NUMX];
+
+        for (int i = 0; i < NUMY; i++) {
+            for (int j = 0; j < NUMX; j++) {
+                scale[i][j] = 0;
+            }
+        }
+
+        for (int i = 0; i < NUMY; i++) {
+            for (int j = 0; j < NUMX; j++) {
+                for (int k = i * DELTAY; k < (i + 1) * DELTAY - 1; k++)
+                    for (int l = j * DELTAX; l < (j + 1) * DELTAX - 1; l++) {
+                        if ((sobelImage[k * width + l] & 0xff) == 255) {
+                            scale[i][j] = scale[i][j] + 1;
+                        }
+                    }
+            }
+        }
+
+        for (int i = 0; i < NUMY; i++) {
+            for (int j = 0; j < NUMX; j++) {
+                System.out.print(scale[i][j] + " ");
+            }
+            System.out.print("\n");
+        }
+
+        int count = 0;
+        for (int i = 0; i < NUMY; i++) {
+            for (int j = 0; j < NUMX; j++) {
+                count = count + scale[i][j];
+            }
+        }
+        int average = count / (NUMX * NUMY);
+
+        for (int i = 0; i < NUMY; i++) {
+            for (int j = 0; j < NUMX; j++) {
+                if (scale[i][j] > average) {
+                    scale[i][j] = 1;
+                    System.out.print("1 ");
+                } else {
+                    scale[i][j] = 0;
+                    System.out.print("0 ");
+                }
+            }
+            System.out.print("\n");
+        }
+
+        int x = (int) Math.floor((double) NUMX * centerX);
+        int y = (int) Math.floor((double) NUMY * centerY);
+
+        Rect rect = findRect(scale, NUMY, NUMX, y, x);
+
+        Log.d("TAG", "[" + rect.x +"," + rect.y + ", " + rect.width + ", " + rect.height + "]");
+        drawRect(sobelImage, height, width, new Rect(rect.x * DELTAX, rect.y * DELTAY,
+                rect.width * DELTAX - 1, rect.height * DELTAY - 1));
+
+    }
+
+    private static Rect findRect(int scale[][], int blockY, int blockX, int y, int x) {
+        Rect rect = new Rect();
+
+        int left = x, right = x;
+        int top = y, bottom = y;
+
+        // 点击位置是否是边缘
+        boolean isEdge = scale[y][x] == 1;
+
+        while (left > 0) {
+            if (isEdge) {
+                if (scale[y][left] == 0)
+                    break;
+            }
+            else {
+                if (scale[y][left] == 1)
+                    break;
+            }
+            left--;
+        }
+
+        while (top > 0) {
+            if (isEdge) {
+                if (scale[top][x] == 0)
+                    break;
+            }
+            else {
+                if (scale[top][x] == 1)
+                    break;
+            }
+            top--;
+        }
+
+
+        while (right < blockX) {
+            if (isEdge) {
+                if (scale[y][right] == 0)
+                    break;
+            }
+            else {
+                if (scale[y][right] == 1)
+                    break;
+            }
+            right ++;
+        }
+
+        while (bottom < blockY) {
+            if (isEdge) {
+                if (scale[bottom][x] == 0)
+                    break;
+            }
+            else {
+                if (scale[bottom][x] == 1)
+                    break;
+            }
+            bottom ++;
+        }
+
+        rect.x = left;
+        rect.y = top;
+        rect.height = bottom - top + 1;
+        rect.width = right - left + 1;
+
+        return rect;
+    }
+
+    /**
+     * 绘制矩形
+     * @param image
+     * @param height
+     * @param width
+     * @param rect
+     */
+    private static void drawRect(int[] image, int height, int width, Rect rect) {
+        int left = rect.x;
+        int right = left + rect.width;
+        right = right < width ? right : width-1;
+
+        Log.d("TAG", ">>>>left:" + left);
+        Log.d("TAG", ">>>>right:" + right);
+
+        int top = rect.y;
+        int bottom = top + rect.height;
+        bottom = bottom < height ? bottom : height - 1;
+        Log.d("TAG", ">>>>top:" + top);
+        Log.d("TAG", ">>>>bottom:" + bottom);
+
+        for (int k = top; k < bottom; k++) {
+            image[k * width + left] = (0xff | 0X00 << 16 | 0xff << 8 | 0);
+            image[k * width + right] = (0xff | 0X00 << 16 | 0xff << 8 | 0);
+        }
+        for (int l = left; l < right; l++) {
+            image[top * width + l] = (0xff | 0X00 << 16 | 0xff << 8 | 0);
+            image[bottom * width + l] = (0xff | 0X00 << 16 | 0xff << 8 | 0);
+        }
+    }
+
+    /**
+     * 大津阈值
+     * @param sobelImage
+     * @param height
+     * @param width
+     * @return
+     */
+    public static int otsu(int[] sobelImage, int height, int width) {
+        int hist[] = new int[256];
+        for (int i = 0; i < 256; i++) {
+            hist[i] = 0;
+        }
+
+        for (int i = 1; i < height - 1; i++) {
+            for (int j = 1; j < width - 1; j++) {
+                int gray = sobelImage[i * width + j] & 0xff;
+                hist[gray] = hist[gray] + 1;
+            }
+        }
+
+        float w0, w1, u0tmp, u1tmp, u0, u1, deltaTmp, deltaMax = 0;
+
+        int threshold = 0;
+
+        //遍历所有从0到255灰度级的阈值分割条件，测试哪一个的类间方差最大
+        for(int i = 0; i < 256; i++) {
+            w0 = w1 = u0tmp = u1tmp = u0 = u1 = deltaTmp = 0;
+
+            for(int j = 0; j < 256; j++)
+            {
+                if(j <= i)   //背景部分
+                {
+                    w0 += hist[j];
+                    u0tmp += j * hist[j];
+                }
+                else   //前景部分
+                {
+                    w1 += hist[j];
+                    u1tmp += j * hist[j];
+                }
+            }
+            u0 = u0tmp / w0;
+            u1 = u1tmp / w1;
+            deltaTmp = (float)(w0 *w1* (u0 - u1) * (u0 - u1));
+            if(deltaTmp > deltaMax)
+            {
+                deltaMax = deltaTmp;
+                threshold = i;
+            }
+        }
+
+        return threshold;
+
+    }
+
 
     static int[] findFrame(int[] pic, int width, int height) {
         int[] frame = new int[pic.length];

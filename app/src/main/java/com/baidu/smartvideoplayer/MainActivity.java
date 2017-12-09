@@ -1,6 +1,7 @@
 package com.baidu.smartvideoplayer;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -11,21 +12,24 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.Toast;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
-import org.opencv.core.Mat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements View.OnTouchListener{
+    private static final String TAG = "TAG";
+
     private static final String VIDEO_FILE_SCHEMA = "file";
     private static final String VIDEO_CONTENT_SCHEMA = "content";
     TextureView mVideoView;
@@ -35,7 +39,12 @@ public class MainActivity extends Activity {
     private ImageView mPreview;
     private boolean mNeedSearch;
     private String mVideoUrl = "";
-    Mat mMatSrc;
+
+    private int mScreenWidth;
+    private int mScreenHeight;
+
+    private float ratioX, ratioY;
+
 
     /**
      * 通过OpenCV管理Android服务，异步初始化OpenCV
@@ -58,6 +67,11 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         handleIntent();
+
+        WindowManager wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+
+        mScreenWidth = wm.getDefaultDisplay().getWidth();
+        mScreenHeight = wm.getDefaultDisplay().getHeight();
 
         mVideoView = findViewById(R.id.video);
         mPreview = findViewById(R.id.preview);
@@ -108,11 +122,44 @@ public class MainActivity extends Activity {
                     Bitmap bmp = mVideoView.getBitmap();
                     Log.d("MCLOG", "2 : " + (System.currentTimeMillis() - time1));
 
-                    AlgorithmBuilder builder = new AlgorithmBuilder(bmp);
+/*                    AlgorithmBuilder builder = new AlgorithmBuilder(bmp);
                     Bitmap resultBmp = builder.Gray().Canny().transformToBitmap();
 
                     mPreview.setImageBitmap(resultBmp);
                     bmp.compress(Bitmap.CompressFormat.JPEG, 80, baos);
+*/
+                    int width = bmp.getWidth();
+                    int height = bmp.getHeight();
+                    int[] rgb = new int[width * height];
+                    int[] grey = new int[rgb.length];
+                    int[] sobelPic = new int[rgb.length];
+
+                    bmp.getPixels(rgb, 0, width, 0, 0, bmp.getWidth(), bmp.getHeight());
+
+                    PictureUtils.convertToGrey(rgb, grey);
+                    PictureUtils.sobel(grey, width, height, sobelPic);
+
+                    int threshold =  PictureUtils.otsu(sobelPic, height, width);
+                    Log.d("TAG", "threshold = " + threshold);
+
+                    PictureUtils.turn2(sobelPic, height, width, threshold);
+                    PictureUtils.blockSplit(sobelPic, height, width, ratioX, ratioY);
+
+
+
+/*                    mMatSrc = new Mat(bmp.getWidth(), bmp.getHeight(), CvType.CV_8UC4);
+                    Utils.bitmapToMat(bmp, mMatSrc);
+                    Mat mMatGrey = new Mat(bmp.getWidth(), bmp.getHeight(), CvType.CV_8SC1);
+                    Imgproc.cvtColor(mMatSrc, mMatGrey, 1);
+                    Mat mMatCanny = new Mat(bmp.getWidth(), bmp.getHeight(), CvType.CV_8SC1);
+                    Imgproc.Canny(mMatGrey, mMatCanny, 80, 100);
+                    Bitmap result = Bitmap.createBitmap(bmp.getWidth(),bmp.getHeight(), Bitmap.Config.RGB_565 );
+                    Utils.matToBitmap(mMatCanny, result);
+                    */
+                    Bitmap result = Bitmap.createBitmap(sobelPic, width, height, Bitmap.Config
+                            .RGB_565);
+                    mPreview.setImageBitmap(result);
+                    result.compress(Bitmap.CompressFormat.JPEG, 80, baos);
 
                     ImgSearch.sampleOfNormalInterface(baos.toByteArray(), new ImageSearchResult());
                     mNeedSearch = false;
@@ -120,6 +167,7 @@ public class MainActivity extends Activity {
                 }
             }
         });
+        mVideoView.setOnTouchListener(this);
         mVideoView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -190,6 +238,16 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         super.onDestroy();
         mPlayer.stop();
+    }
+
+    @Override
+    public boolean onTouch(View v, MotionEvent event) {
+        if(event.getAction() == MotionEvent.ACTION_DOWN) {
+            //当手指按下的时候
+            ratioX = event.getX()/mScreenWidth;
+            ratioY = event.getY()/mScreenHeight;
+        }
+        return false;
     }
 
     class ImageSearchResult implements ImgSearch.ImageSearchListener {
