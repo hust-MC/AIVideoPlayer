@@ -242,52 +242,55 @@ public class PictureUtils {
 
         // 点击位置是否是边缘
         boolean isEdge = scale[y][x] == 1;
+        boolean tempEdge = isEdge;
 
         while (left > 0) {
-            if (isEdge) {
+            if (tempEdge) {
                 if (scale[y][left] == 0)
                     break;
             }
             else {
                 if (scale[y][left] == 1)
-                    break;
+                    tempEdge = true;
             }
             left--;
         }
 
+        tempEdge = isEdge;
         while (top > 0) {
-            if (isEdge) {
+            if (tempEdge) {
                 if (scale[top][x] == 0)
                     break;
             }
             else {
                 if (scale[top][x] == 1)
-                    break;
+                    tempEdge = true;
             }
             top--;
         }
 
-
+        tempEdge = isEdge;
         while (right < blockX) {
-            if (isEdge) {
+            if (tempEdge) {
                 if (scale[y][right] == 0)
                     break;
             }
             else {
                 if (scale[y][right] == 1)
-                    break;
+                    tempEdge = true;
             }
             right ++;
         }
 
+        tempEdge = isEdge;
         while (bottom < blockY) {
-            if (isEdge) {
+            if (tempEdge) {
                 if (scale[bottom][x] == 0)
                     break;
             }
             else {
                 if (scale[bottom][x] == 1)
-                    break;
+                    tempEdge = true;
             }
             bottom ++;
         }
@@ -321,13 +324,16 @@ public class PictureUtils {
         Log.d("TAG", ">>>>top:" + top);
         Log.d("TAG", ">>>>bottom:" + bottom);
 
+        Log.d("TAG", ">>>>width:" + width);
+        Log.d("TAG", ">>>>height:" + height);
+
         for (int k = top; k < bottom; k++) {
             image[k * width + left] = (0xff | 0X00 << 16 | 0xff << 8 | 0);
             image[k * width + right] = (0xff | 0X00 << 16 | 0xff << 8 | 0);
         }
         for (int l = left; l < right; l++) {
-            image[top * width + l] = (0xff | 0X00 << 16 | 0xff << 8 | 0);
-            image[bottom * width + l] = (0xff | 0X00 << 16 | 0xff << 8 | 0);
+            image[top * width + l] = ( 0X00 << 16 | 0xff << 8 | 0);
+            image[bottom * width + l] = (  0X00 << 16 | 0xff << 8 | 0);
         }
     }
 
