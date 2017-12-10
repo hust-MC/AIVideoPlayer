@@ -328,12 +328,12 @@ public class PictureUtils {
         Log.d("TAG", ">>>>height:" + height);
 
         for (int k = top; k < bottom; k++) {
-            image[k * width + left] = (0xff | 0X00 << 16 | 0xff << 8 | 0);
-            image[k * width + right] = (0xff | 0X00 << 16 | 0xff << 8 | 0);
+            image[k * width + left] = (0xff | 0Xff << 16 | 0x00 << 8 | 0);
+            image[k * width + right] = (0xff | 0Xff << 16 | 0x00 << 8 | 0);
         }
         for (int l = left; l < right; l++) {
-            image[top * width + l] = ( 0X00 << 16 | 0xff << 8 | 0);
-            image[bottom * width + l] = (  0X00 << 16 | 0xff << 8 | 0);
+            image[top * width + l] = ( 0Xff << 16 | 0x00 << 8 | 0);
+            image[bottom * width + l] = (  0Xff << 16 | 0x00 << 8 | 0);
         }
     }
 
